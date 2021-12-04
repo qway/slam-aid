@@ -25,7 +25,7 @@ def download(url: str, fname: Path):
             unit_divisor=1024,
             leave=False
     ) as bar:
-        for data in resp.iter_content(): # TODO test without chunk_size=1024
+        for data in resp.iter_content(chunk_size=1024*4):
             size = file.write(data)
             bar.update(size)
 
