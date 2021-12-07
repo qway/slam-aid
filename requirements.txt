@@ -3,3 +3,4 @@ tqdm
 protobuf
 opencv-python-headless
 decord
+requests

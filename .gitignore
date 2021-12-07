@@ -132,3 +132,4 @@ dmypy.json
 .idea
 pyproject.toml
 poetry.lock
+.DS_Store
