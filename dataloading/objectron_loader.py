@@ -114,7 +114,7 @@ class ObjectronDataset(IterableDataset):
                      annotation_types) = get_frame_annotation(self.annotations[id], frame)
                     keypoints2d.append(object_keypoints_2d)
                     keypoints3d.append(object_keypoints_3d)
-                    labels.append(annotation_types)
+                    labels.append(object_categories)
 
                 yield batch[0], torch.Tensor(keypoints2d), torch.Tensor(keypoints3d), labels
         return iterator()
