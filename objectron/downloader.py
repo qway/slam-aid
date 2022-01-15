@@ -17,53 +17,29 @@ import numpy as np
 from objectron.schema import object_pb2 as object_protocol
 from objectron.schema import annotation_data_pb2 as annotation_protocol
 from objectron.schema import a_r_capture_metadata_pb2 as ar_metadata_protocol
-
-# local folder structure
-DATA_DIR_PATH = 'objectron/data'
-VIDEOS_TEMP_DIR_PATH = 'objectron/data/_videos'
-CLASS_DIR_PATH = 'objectron/data/{class_}'
-IMAGES_DIR_PATH = 'objectron/data/{class_}/images'
-ANNOTATIONS_DIR_PATH = 'objectron/data/{class_}/annotations'
-CLASSES = [
-    'bike', 
-    'book', 
-    'bottle', 
-    'camera', 
-    'cereal_box', 
-    'chair', 
-    'cup', 
-    'laptop', 
-    'shoe',
-]
-
-# google cloud bucket urls
-BASE_URL = 'https://storage.googleapis.com/objectron'
-VIDEO_IDS_URL = 'https://storage.googleapis.com/objectron/v1/index/{class_}_annotations_{dataset}'
-VIDEO_URL = 'https://storage.googleapis.com/objectron/videos/{video_id}/video.MOV'
-METADATA_URL = 'https://storage.googleapis.com/objectron/videos/{video_id}/geometry.pbdata'
-ANNOTATION_URL = 'https://storage.googleapis.com/objectron/annotations/{video_id}.pbdata'
+import objectron.constants as constants
 
 def download(classes, videos_per_class, images_per_video, jobs):
-    assert 1 <= classes <= len(CLASSES), f'there is a total of {len(CLASSES)} classes'
+    assert 1 <= classes <= len(constants.CLASSES), f'there is a total of {len(constants.CLASSES)} classes'
     assert videos_per_class > 0, 'minimum of 1 video per class is required'
     assert images_per_video > 0, 'minimum of 1 image per video is required'
     assert jobs > 0 or jobs == -1, 'at least 1 job is required to start the process'
 
     # TODO: ask whether to continue
-    if os.path.exists(DATA_DIR_PATH):
+    if os.path.exists(constants.DATA_DIR_PATH):
         print('removing previous data')
-        shutil.rmtree(DATA_DIR_PATH)
+        shutil.rmtree(constants.DATA_DIR_PATH)
 
-    print('creating the folder structure')
-    os.mkdir(DATA_DIR_PATH)
-    os.mkdir(VIDEOS_TEMP_DIR_PATH)
-    for class_ in CLASSES:
-        os.mkdir(CLASS_DIR_PATH.format(class_=class_))
-        os.mkdir(IMAGES_DIR_PATH.format(class_=class_))
-        os.mkdir(ANNOTATIONS_DIR_PATH.format(class_=class_))
+    print('creating folder structure')
+    os.mkdir(constants.DATA_DIR_PATH)
+    os.mkdir(constants.VIDEOS_TEMP_DIR_PATH)
+    for class_ in constants.CLASSES:
+        os.mkdir(constants.CLASS_DIR_PATH.format(class_=class_))
+        os.mkdir(constants.IMAGES_DIR_PATH.format(class_=class_))
+        os.mkdir(constants.ANNOTATIONS_DIR_PATH.format(class_=class_))
 
-    classes_to_download = random.sample(CLASSES, classes)
-    print(f'classes to download: {', '.join(classes_to_download)}')
+    classes_to_download = random.sample(constants.CLASSES, classes)
+    print(f'classes to download: {", ".join(classes_to_download)}')
 
     video_ids = []
     for class_ in classes_to_download:
@@ -88,15 +64,15 @@ def download(classes, videos_per_class, images_per_video, jobs):
 def extract_images(video_id, images_per_video):
     class_ = re.search(r'^([^/]+)/', video_id).group(1)
 
-    response = requests.get(ANNOTATION_URL.format(video_id=video_id))
+    response = requests.get(constants.ANNOTATION_URL.format(video_id=video_id))
     annotation_sequence = annotation_protocol.Sequence()
     annotation_sequence.ParseFromString(response.content)
 
-    response = requests.get(METADATA_URL.format(video_id=video_id))
+    response = requests.get(constants.METADATA_URL.format(video_id=video_id))
     geometry_data = get_geometry_data(response.content)
 
-    response = requests.get(VIDEO_URL.format(video_id=video_id))
-    video_path = os.path.join(VIDEOS_TEMP_DIR_PATH, f'{video_id_to_filename(video_id)}.MOV')
+    response = requests.get(constants.VIDEO_URL.format(video_id=video_id))
+    video_path = os.path.join(constants.VIDEOS_TEMP_DIR_PATH, f'{video_id_to_filename(video_id)}.MOV')
     with open(video_path, 'wb') as f:
         f.write(response.content)
 
@@ -114,7 +90,7 @@ def extract_images(video_id, images_per_video):
             continue
 
         frame_filename = f'{video_id_to_filename(video_id)}_frame-{idx}'
-        image_path = os.path.join(IMAGES_DIR_PATH.format(class_=class_), f'{frame_filename}.jpg')
+        image_path = os.path.join(constants.IMAGES_DIR_PATH.format(class_=class_), f'{frame_filename}.jpg')
         cv2.imwrite(image_path, frame)
 
         object_keypoints_2d, object_keypoints_3d, object_categories, \
@@ -133,7 +109,7 @@ def extract_images(video_id, images_per_video):
             view=view
         )
 
-        annotation_path = os.path.join(ANNOTATIONS_DIR_PATH.format(class_=class_), f'{frame_filename}.pickle')
+        annotation_path = os.path.join(constants.ANNOTATIONS_DIR_PATH.format(class_=class_), f'{frame_filename}.pickle')
         with open(annotation_path, 'wb') as f:
             pickle.dump(annotation_dict, f)
 
@@ -213,7 +189,7 @@ def get_geometry_data(bytes):
 
 
 def get_video_ids(class_, max_count, dataset):
-    video_ids = requests.get(VIDEO_IDS_URL.format(class_=class_, dataset=dataset)).text
+    video_ids = requests.get(constants.VIDEO_IDS_URL.format(class_=class_, dataset=dataset)).text
     video_ids = video_ids.split('\n')
     video_ids = random.sample(video_ids, min(max_count, len(video_ids)))
 

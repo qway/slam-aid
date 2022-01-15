@@ -4,3 +4,4 @@ protobuf
 opencv-python-headless
 decord
 requests
+scikit-image
